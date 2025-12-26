@@ -130,6 +130,37 @@
         
         let gameInterval;
         let isGameRunning = false;
+        
+        // Particles
+        let particles = [];
+        
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = Math.random() * 2 - 1;
+                this.speedY = Math.random() * 2 - 1;
+                this.life = 100; // Frames
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 2;
+                this.size *= 0.95;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life / 100;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
 
         // Initialize game
         function initGame() {
@@ -148,6 +179,8 @@
             // Load High Score
             highScore = localStorage.getItem('neonSnakeHighScore') || 0;
             highScoreElement.innerText = highScore;
+            
+            particles = []; // Reset particles
 
             gameOverScreen.style.display = 'none';
             isGameRunning = true;
@@ -160,7 +193,19 @@
 
         function gameLoop() {
             update();
+            updateParticles();
             draw();
+            drawParticles();
+        }
+
+        function updateParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
         }
 
         function update() {
@@ -185,6 +230,9 @@
             if (head.x === foodX && head.y === foodY) {
                 score += 10;
                 scoreElement.innerText = score;
+                
+                // Particle Explosion
+                createExplosion(head.x * gridSize + gridSize/2, head.y * gridSize + gridSize/2, '#f0f');
 
                 // Update High Score
                 if (score > highScore) {
@@ -213,6 +261,8 @@
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            drawGrid();
+
             // Draw Snake
             for (let i = 0; i < snake.length; i++) {
                 // Gradient or specialized color for head vs body
@@ -237,6 +287,35 @@
             ctx.shadowBlur = 0;
         }
 
+        function drawParticles() {
+            for (let p of particles) {
+                p.draw();
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
         function placeFood() {
             foodX = Math.floor(Math.random() * tileCount);
             foodY = Math.floor(Math.random() * tileCount);
@@ -259,6 +338,52 @@
 
         // Input Controls
         document.addEventListener('keydown', keyPush);
+        
+        // Touch Controls
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', function(evt) {
+            touchStartX = evt.changedTouches[0].screenX;
+            touchStartY = evt.changedTouches[0].screenY;
+        }, false);
+        
+        document.addEventListener('touchend', function(evt) {
+            if(!isGameRunning) {
+                initGame(); // Tap to restart
+                return;
+            }
+
+            let touchEndX = evt.changedTouches[0].screenX;
+            let touchEndY = evt.changedTouches[0].screenY;
+            
+            handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+        }, false);
+        
+        function handleSwipe(startX, startY, endX, endY) {
+            let diffX = endX - startX;
+            let diffY = endY - startY;
+            
+            if(Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal Swipe
+                if(diffX > 0) {
+                    // Right
+                    if (velocityX !== -1) { velocityX = 1; velocityY = 0; }
+                } else {
+                    // Left
+                    if (velocityX !== 1) { velocityX = -1; velocityY = 0; }
+                }
+            } else {
+                // Vertical Swipe
+                if(diffY > 0) {
+                    // Down
+                    if (velocityY !== -1) { velocityX = 0; velocityY = 1; }
+                } else {
+                    // Up
+                    if (velocityY !== 1) { velocityX = 0; velocityY = -1; }
+                }
+            }
+        }
 
         function keyPush(evt) {
             if (!isGameRunning && evt.keyCode === 13) { // Enter key to restart
