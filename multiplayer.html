@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Snake Multiplayer</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin: 10px 0;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+            letter-spacing: 5px;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            border: 2px solid #333;
+        }
+
+        canvas {
+            background-color: #111;
+            display: block;
+        }
+
+        #status {
+            margin-top: 10px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>NEON SNAKE: ONLINE</h1>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+    <div id="status">Connecting...</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        const gridSize = 20;
+
+        // Determine WS Protocol
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/websocket`;
+        
+        let ws;
+        
+        function connect() {
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                statusDiv.innerText = 'Connected! Use Arrow Keys to Start.';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'state') {
+                    render(data);
+                }
+            };
+
+            ws.onclose = () => {
+                statusDiv.innerText = 'Disconnected. Reconnecting...';
+                setTimeout(connect, 3000);
+            };
+        }
+
+        function render(state) {
+            // Clear
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid
+            drawGrid();
+
+            // Draw Food
+            ctx.fillStyle = '#f0f';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#f0f';
+            ctx.fillRect(state.food.x * gridSize, state.food.y * gridSize, gridSize-2, gridSize-2);
+            ctx.shadowBlur = 0;
+
+            // Draw Players
+            for (const player of state.players) {
+                ctx.fillStyle = player.color;
+                for (const part of player.snake) {
+                    ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize-2, gridSize-2);
+                }
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        // Input
+        document.addEventListener('keydown', (evt) => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            let x = 0;
+            let y = 0;
+
+            switch(evt.keyCode) {
+                case 37: x = -1; break; // Left
+                case 38: y = -1; break; // Up
+                case 39: x = 1; break;  // Right
+                case 40: y = 1; break;  // Down
+            }
+
+            if (x !== 0 || y !== 0) {
+                ws.send(JSON.stringify({ type: 'input', x, y }));
+            }
+        });
+
+        connect();
+    </script>
+</body>
+</html>
