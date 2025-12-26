@@ -63,7 +63,7 @@
             text-shadow: 0 0 10px #f0f;
         }
 
-        .btn {
+        #restart-btn {
             background: transparent;
             color: #0ff;
             border: 2px solid #0ff;
@@ -74,12 +74,9 @@
             transition: all 0.3s;
             text-shadow: 0 0 5px #0ff;
             box-shadow: 0 0 5px #0ff;
-            margin: 10px;
-            text-decoration: none;
-            display: inline-block;
         }
 
-        .btn:hover {
+        #restart-btn:hover {
             background: #0ff;
             color: #000;
             box-shadow: 0 0 20px #0ff;
@@ -102,8 +99,7 @@
         <div id="game-over">
             <h2>GAME OVER</h2>
             <p>Final Score: <span id="final-score">0</span></p>
-            <button id="restart-btn" class="btn" onclick="initGame()">TRY AGAIN</button>
-            <a href="multiplayer.html" class="btn">MULTIPLAYER</a>
+            <button id="restart-btn" onclick="initGame()">TRY AGAIN</button>
         </div>
     </div>
     
