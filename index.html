@@ -91,7 +91,7 @@
 </head>
 <body>
 
-    <div id="score-board">SCORE: <span id="score">0</span></div>
+    <div id="score-board">SCORE: <span id="score">0</span> | HIGH SCORE: <span id="high-score">0</span></div>
 
     <div id="game-container">
         <canvas id="gameCanvas" width="400" height="400"></canvas>
@@ -109,6 +109,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('high-score');
         const finalScoreElement = document.getElementById('final-score');
         const gameOverScreen = document.getElementById('game-over');
 
@@ -118,6 +119,7 @@
         let velocityX = 0;
         let velocityY = 0;
         let score = 0;
+        let highScore = 0;
         
         // Snake head starts in center
         let snake = [];
@@ -143,6 +145,10 @@
             score = 0;
             scoreElement.innerText = score;
             
+            // Load High Score
+            highScore = localStorage.getItem('neonSnakeHighScore') || 0;
+            highScoreElement.innerText = highScore;
+
             gameOverScreen.style.display = 'none';
             isGameRunning = true;
             
@@ -179,6 +185,22 @@
             if (head.x === foodX && head.y === foodY) {
                 score += 10;
                 scoreElement.innerText = score;
+
+                // Update High Score
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElement.innerText = highScore;
+                    localStorage.setItem('neonSnakeHighScore', highScore);
+                }
+
+                // Dynamic Difficulty
+                // Base 15 FPS (~66ms). Increase speed by reducing interval.
+                // Cap at ~33 FPS (30ms).
+                const newInterval = Math.max(30, (1000/15) - (score / 10));
+                
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, newInterval);
+
                 placeFood();
                 // Don't pop the tail, so snake grows
             } else {
